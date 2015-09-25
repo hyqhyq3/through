@@ -3,11 +3,16 @@ package main
 import (
 	"bufio"
 	"crypto/tls"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"net"
 	"net/url"
 )
+
+type Dialer interface {
+	Dial(network, addr string) (c net.Conn, err error)
+}
 
 type AuthInfo struct {
 	Username string
@@ -50,17 +55,33 @@ func (h *HTTPSDialer) Dial(network, addr string) (c net.Conn, err error) {
 		return
 	}
 	w := bufio.NewWriter(conn)
-	w.WriteString("CONNECT %s HTTP/1.1\r\n")
+	w.WriteString(fmt.Sprintf("CONNECT %s HTTP/1.0\r\n", addr))
+	w.WriteString(fmt.Sprintf("Host: %s", addr))
 	w.WriteString("Proxy-Agent: through/1.0\r\n")
+	if h.hasAuth() {
+		w.WriteString(fmt.Sprintf("Proxy-Authorization: %s\r\n", h.basicAuth()))
+	}
 	w.WriteString("\r\n")
 	w.Flush()
 
 	r := bufio.NewReader(conn)
-	line, _, err := r.ReadLine()
-	if err != nil {
-		return
+	for {
+		line, err := r.ReadString(byte('\n'))
+		if err != nil {
+			return nil, err
+		}
+		if line == "\r\n" {
+			break
+		}
+		fmt.Println(line)
 	}
-	fmt.Println(string(line))
+	return conn, nil
+}
 
-	return
+func (h *HTTPSDialer) hasAuth() bool {
+	return h.Auth != nil
+}
+
+func (h *HTTPSDialer) basicAuth() string {
+	return fmt.Sprintf("Basic %s", base64.StdEncoding.EncodeToString([]byte(h.Auth.Username+":"+h.Auth.Password)))
 }

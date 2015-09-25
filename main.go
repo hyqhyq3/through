@@ -1,34 +1,46 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"net"
 )
-
-type Dialer interface {
-	Dial(network, addr string) (c net.Conn, err error)
-}
 
 type Tester interface {
 	Test(string) (bool, error)
 }
 
-type Rule struct {
-	Tester
-	Route Dialer
-}
+//type DirectDialer struct{}
 
-func main() {
-	ProxyA, err := ProxyFromURL("https://hyq:k910407@s4.60in.com/")
+//func NewDirectDialer() Dialer {
+//	return &DirectDialer{}
+//}
+
+//func (d*DirectDialer) Dial(network,addr string) (net.con)
+
+func initConfig() {
+	ProxyA, err := ProxyFromURL("https://hyq:pass@example.com/")
 	if err != nil {
 		log.Fatal(err)
 	}
-	rule := &Rule{NewDomainTester("google.com", true), ProxyA}
-	rule.Test("hello")
+	AddRouteRule(NewDomainTester("google.com", true), ProxyA)
+	AddRouteRule(NewDomainTester("google.co.jp", true), ProxyA)
+	AddRouteRule(NewGeoIPTester("CN", true), &net.Dialer{})
+	SetDefaultRule(ProxyA)
+}
 
-	_, err = ProxyA.Dial("tcp", "google.com:80")
-	if err != nil {
-		fmt.Println(err)
+func startServer(exit <-chan bool) {
+
+	server := NewHttpProxyServer()
+	if err := server.ListenAndServe(":4443", exit); err != nil {
+		log.Fatal(err)
 	}
+}
+
+func main() {
+
+	initConfig()
+
+	exit := make(chan bool)
+	startServer(exit)
+
 }

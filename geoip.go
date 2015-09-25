@@ -7,7 +7,11 @@ import (
 	"github.com/oschwald/geoip2-golang"
 )
 
-type GeoIPTester string
+type GeoIPTester struct {
+	Country string
+	// Resolve the host, and check
+	Resolve bool
+}
 
 var db *geoip2.Reader
 
@@ -22,19 +26,30 @@ func init() {
 func (rule *GeoIPTester) Test(host string) (ok bool, err error) {
 	ip := net.ParseIP(host)
 	if ip == nil {
-		return false, nil
+		if rule.Resolve {
+			addr, err := net.ResolveTCPAddr("tcp", host+":0")
+			if err != nil {
+				return false, nil
+			}
+			ip = addr.IP
+		} else {
+			return false, nil
+		}
 	}
 	city, err := db.City(ip)
 	if err != nil {
 		return false, err
 	}
-	if city.Country.IsoCode == string(*rule) {
+	if city.Country.IsoCode == rule.Country {
 		return true, nil
 	}
 	return false, nil
 }
 
-func NewGeoIPTester(country string) *GeoIPTester {
-	tester := GeoIPTester(country)
-	return &tester
+func NewGeoIPTester(country string, resolve bool) *GeoIPTester {
+	tester := &GeoIPTester{
+		Country: country,
+		Resolve: resolve,
+	}
+	return tester
 }
