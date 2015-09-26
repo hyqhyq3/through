@@ -22,8 +22,13 @@ func initConfig() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	ProxyB, err := ProxyFromURL("ss://method:pass@example.com:4000")
+	if err != nil {
+		log.Fatal(err)
+	}
 	AddRouteRule(NewDomainTester("google.com", true), ProxyA)
 	AddRouteRule(NewDomainTester("google.co.jp", true), ProxyA)
+	AddRouteRule(NewDomainTester("facebook.com", true), ProxyB)
 	AddRouteRule(NewGeoIPTester("CN", true), &net.Dialer{})
 	SetDefaultRule(ProxyA)
 }

@@ -21,7 +21,6 @@ type AuthInfo struct {
 
 type HTTPSDialer struct {
 	Host string
-	Port string
 	Auth *AuthInfo
 }
 
