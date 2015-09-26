@@ -6,7 +6,7 @@ import (
 )
 
 func TestCIDRTester(t *testing.T) {
-	tester, _ := NewCIDRTester("192.168.1.1/24")
+	tester := NewCIDRTester("192.168.1.1/24")
 	ok, err := tester.Test("192.168.1.254")
 	if err != nil {
 		log.Fatal(err)
@@ -20,6 +20,12 @@ func TestCIDRTester(t *testing.T) {
 		log.Fatal(err)
 	}
 	if ok {
+		t.Fail()
+	}
+
+	tester = NewCIDRTester("127.0.0.0/8")
+
+	if ok, err = tester.Test("127.0.0.1"); !ok {
 		t.Fail()
 	}
 }

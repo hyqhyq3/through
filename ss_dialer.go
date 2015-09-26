@@ -9,19 +9,20 @@ import (
 )
 
 type SSDialer struct {
+	name     string
 	Host     string
 	Method   string
 	Password string
 }
 
-func NewSSDialer(u *url.URL) (Dialer, error) {
+func NewSSDialer(name string, u *url.URL) (Dialer, error) {
 	host := u.Host
 	if u.User == nil {
 		return nil, errors.New("Must have encrypt method and password")
 	}
 	method := u.User.Username()
 	password, _ := u.User.Password()
-	return &SSDialer{host, method, password}, nil
+	return &SSDialer{name, host, method, password}, nil
 }
 
 func init() {
@@ -38,4 +39,8 @@ func (s *SSDialer) Dial(network, addr string) (c net.Conn, err error) {
 		return nil, err
 	}
 	return ssConn, nil
+}
+
+func (s *SSDialer) Name() string {
+	return s.name
 }

@@ -3,9 +3,11 @@ package main
 
 import (
 	"bufio"
+	"fmt"
 	"io"
 	"log"
 	"net"
+	"net/url"
 	"regexp"
 	"strings"
 )
@@ -30,6 +32,7 @@ func Splice(r io.Reader, w io.WriteCloser, exit chan<- bool) {
 }
 
 type Request struct {
+	Path    string
 	Addr    string
 	Headers map[string][]string
 }
@@ -53,7 +56,7 @@ func handleProxyClient(c net.Conn) {
 	r := bufio.NewReader(c)
 	w := bufio.NewWriter(c)
 	defer w.Flush()
-	status, err := r.ReadString(byte('\n'))
+	requestLine, err := r.ReadString(byte('\n'))
 	if err != nil {
 		log.Println(err)
 		return
@@ -74,41 +77,77 @@ func handleProxyClient(c net.Conn) {
 		line = strings.TrimSpace(line)
 		arr := strings.SplitN(line, ":", 2)
 		if len(arr) == 2 {
-			req.Headers[arr[0]] = append(req.Headers[arr[0]], arr[1])
+			req.Headers[arr[0]] = append(req.Headers[arr[0]], strings.TrimSpace(arr[1]))
 		}
 	}
 	// todo readAuth
-	re, err := regexp.Compile(`([A-Z]+) ([^\s]*) HTTP/\d\.\d`)
+	re, err := regexp.Compile(`([A-Z]+) ([^\s]*) (HTTP/\d\.\d)`)
 	if err != nil {
 		log.Fatal(err)
 	}
-	m := re.FindStringSubmatch(status)
+	m := re.FindStringSubmatch(requestLine)
 	if len(m) < 3 {
 		w.WriteString("HTTP/1.1 404 Host Not Found\r\n\r\nHost not found")
 		return
 	}
-	if m[1] == "CONNECT" {
-		req.Addr = m[2]
+	req.Path = m[2]
+
+	var rc net.Conn
+	switch m[1] {
+	case "CONNECT":
+		req.Addr = req.Path
+		host, _, err := net.SplitHostPort(req.Addr)
+		if err != nil {
+			log.Println("cannot split host " + req.Addr)
+			return
+		}
+		d := Route(host)
+		if d == nil {
+			log.Println("cannot route to " + req.Addr)
+			return
+		}
+
+		rc, err = d.Dial("tcp", req.Addr)
+		if err != nil {
+			w.WriteString("HTTP/1.1 500 Server Error\r\n\r\nCannot connect to " + req.Addr)
+			return
+		}
+		w.WriteString("HTTP/1.1 200 Connection Established\r\n\r\n")
+		w.Flush()
+	default:
+		if host, ok := req.Headers["Host"]; ok {
+			req.Addr = host[0]
+			if strings.IndexByte(req.Addr, byte(':')) == -1 {
+				req.Addr = req.Addr + ":80"
+			}
+			host, _, _ := net.SplitHostPort(req.Addr)
+			d := Route(host)
+			rc, err = d.Dial("tcp", req.Addr)
+			if err != nil {
+				w.WriteString("HTTP/1.1 500 Cannot Connect to Host\r\n\r\n")
+				return
+			}
+			wrc := bufio.NewWriter(rc)
+			u, _ := url.Parse(m[2])
+			wrc.WriteString(fmt.Sprintf("%s %s %s\r\n", m[1], u.Path, m[3]))
+			for key, headers := range req.Headers {
+				if len(key) > 6 && key[:6] == "Proxy-" {
+					continue
+				}
+				for _, header := range headers {
+					wrc.WriteString(key + ": " + header + "\r\n")
+				}
+			}
+			wrc.WriteString("\r\n")
+			wrc.Flush()
+
+		} else {
+			w.WriteString("HTTP/1.1 400 Bad Request\r\n\r\n")
+			return
+		}
+
 	}
 
-	host, _, err := net.SplitHostPort(req.Addr)
-	if err != nil {
-		log.Println("cannot split host " + req.Addr)
-		return
-	}
-	d := Route(host)
-	if d == nil {
-		log.Println("cannot route to " + req.Addr)
-		return
-	}
-
-	rc, err := d.Dial("tcp", req.Addr)
-	if err != nil {
-		w.WriteString("HTTP/1.1 500 Server Error\r\n\r\nCannot connect to " + req.Addr)
-		return
-	}
-	w.WriteString("HTTP/1.1 200 Connection Established\r\n\r\n")
-	w.Flush()
 	exit := make(chan bool)
 	go Splice(c, rc, exit)
 	go Splice(rc, c, exit)

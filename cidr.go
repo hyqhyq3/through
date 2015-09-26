@@ -1,17 +1,20 @@
 package main
 
-import "net"
+import (
+	"log"
+	"net"
+)
 
 type CIDRTester struct {
 	*net.IPNet
 }
 
-func NewCIDRTester(s string) (*CIDRTester, error) {
+func NewCIDRTester(s string) *CIDRTester {
 	_, ipnet, err := net.ParseCIDR(s)
 	if err != nil {
-		return nil, err
+		log.Fatal(err)
 	}
-	return &CIDRTester{ipnet}, nil
+	return &CIDRTester{ipnet}
 }
 
 func (c *CIDRTester) Test(host string) (bool, error) {

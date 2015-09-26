@@ -12,6 +12,7 @@ import (
 
 type Dialer interface {
 	Dial(network, addr string) (c net.Conn, err error)
+	Name() string
 }
 
 type AuthInfo struct {
@@ -20,11 +21,12 @@ type AuthInfo struct {
 }
 
 type HTTPSDialer struct {
+	name string
 	Host string
 	Auth *AuthInfo
 }
 
-func CreateHTTPSProxy(u *url.URL) (dailer Dialer, err error) {
+func CreateHTTPSProxy(name string, u *url.URL) (dailer Dialer, err error) {
 	auth := &AuthInfo{}
 	auth.Username = u.User.Username()
 	auth.Password, _ = u.User.Password()
@@ -35,6 +37,7 @@ func CreateHTTPSProxy(u *url.URL) (dailer Dialer, err error) {
 		port = "443"
 	}
 	return &HTTPSDialer{
+		name: name,
 		Host: host + ":" + port,
 		Auth: auth,
 	}, nil
@@ -72,7 +75,6 @@ func (h *HTTPSDialer) Dial(network, addr string) (c net.Conn, err error) {
 		if line == "\r\n" {
 			break
 		}
-		fmt.Println(line)
 	}
 	return conn, nil
 }
@@ -83,4 +85,8 @@ func (h *HTTPSDialer) hasAuth() bool {
 
 func (h *HTTPSDialer) basicAuth() string {
 	return fmt.Sprintf("Basic %s", base64.StdEncoding.EncodeToString([]byte(h.Auth.Username+":"+h.Auth.Password)))
+}
+
+func (h *HTTPSDialer) Name() string {
+	return h.name
 }

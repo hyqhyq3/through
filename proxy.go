@@ -5,7 +5,7 @@ import (
 	"net/url"
 )
 
-type ProxyCreateFunc func(*url.URL) (Dialer, error)
+type ProxyCreateFunc func(name string, u *url.URL) (Dialer, error)
 
 var proxySchemas map[string]ProxyCreateFunc
 
@@ -16,7 +16,7 @@ func RegisterProxyType(schema string, f ProxyCreateFunc) {
 	proxySchemas[schema] = f
 }
 
-func ProxyFromURL(s string) (Dialer, error) {
+func ProxyFromURL(name, s string) (Dialer, error) {
 	u, err := url.Parse(s)
 	if err != nil {
 		return nil, err
@@ -24,7 +24,7 @@ func ProxyFromURL(s string) (Dialer, error) {
 
 	if proxySchemas != nil {
 		if f, ok := proxySchemas[u.Scheme]; ok {
-			return f(u)
+			return f(name, u)
 		}
 	}
 	return nil, errors.New("proxy: unknown scheme: " + u.Scheme)
