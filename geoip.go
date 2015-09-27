@@ -27,11 +27,14 @@ func (rule *GeoIPTester) Test(host string) (ok bool, err error) {
 	ip := net.ParseIP(host)
 	if ip == nil {
 		if rule.Resolve {
-			addr, err := net.ResolveTCPAddr("tcp", host+":0")
+			ips, err := net.LookupIP(host)
 			if err != nil {
 				return false, nil
 			}
-			ip = addr.IP
+			if len(ips) == 0 {
+				return false, nil
+			}
+			ip = ips[0]
 		} else {
 			return false, nil
 		}
