@@ -1,4 +1,3 @@
-// route.go
 package main
 
 import (

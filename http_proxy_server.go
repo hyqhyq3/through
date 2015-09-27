@@ -1,4 +1,3 @@
-// http_proxy_server.go
 package main
 
 import (
