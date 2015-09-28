@@ -1,36 +1,19 @@
-package main
+package http_proxy
 
 import (
 	"bufio"
 	"fmt"
-	"io"
 	"log"
 	"net"
 	"net/url"
 	"regexp"
 	"strings"
+
+	"github.com/hyqhyq3/through/common"
+	"github.com/hyqhyq3/through/proxy"
 )
 
-func Splice(r io.Reader, w io.WriteCloser, exit chan<- bool) {
-	buf := make([]byte, 1024)
-	for {
-		rn, err := r.Read(buf)
-		if rn > 0 {
-			_, err := w.Write(buf[:rn])
-			if err != nil {
-				w.Close()
-				break
-			}
-		}
-		if err != nil {
-			w.Close()
-			break
-		}
-	}
-	exit <- true
-}
-
-type Request struct {
+type request struct {
 	Path    string
 	Addr    string
 	Headers map[string][]string
@@ -40,11 +23,7 @@ type HttpProxyServer struct {
 	lsn net.Listener
 }
 
-func NewHttpProxyServer() *HttpProxyServer {
-	return &HttpProxyServer{}
-}
-
-func handleProxyClient(c net.Conn) {
+func (h *HttpProxyServer) handleHttpProxyClient(c net.Conn, d common.Dialer) {
 	var closeConn net.Conn = c
 	defer func() {
 		if closeConn != nil {
@@ -61,7 +40,7 @@ func handleProxyClient(c net.Conn) {
 		return
 	}
 
-	req := &Request{
+	req := &request{
 		Headers: make(map[string][]string),
 	}
 	for {
@@ -95,16 +74,6 @@ func handleProxyClient(c net.Conn) {
 	switch m[1] {
 	case "CONNECT":
 		req.Addr = req.Path
-		host, _, err := net.SplitHostPort(req.Addr)
-		if err != nil {
-			log.Println("cannot split host " + req.Addr)
-			return
-		}
-		d := Route(host)
-		if d == nil {
-			log.Println("cannot route to " + req.Addr)
-			return
-		}
 
 		rc, err = d.Dial("tcp", req.Addr)
 		if err != nil {
@@ -119,8 +88,7 @@ func handleProxyClient(c net.Conn) {
 			if strings.IndexByte(req.Addr, byte(':')) == -1 {
 				req.Addr = req.Addr + ":80"
 			}
-			host, _, _ := net.SplitHostPort(req.Addr)
-			d := Route(host)
+
 			rc, err = d.Dial("tcp", req.Addr)
 			if err != nil {
 				w.WriteString("HTTP/1.1 500 Cannot Connect to Host\r\n\r\n")
@@ -148,26 +116,31 @@ func handleProxyClient(c net.Conn) {
 	}
 
 	exit := make(chan bool)
-	go Splice(c, rc, exit)
-	go Splice(rc, c, exit)
+	go proxy.Splice(c, rc, exit)
+	go proxy.Splice(rc, c, exit)
 	<-exit
 	<-exit
 	log.Println("connection closed")
 }
 
-func (h *HttpProxyServer) ListenAndServe(addr string, exit <-chan bool) (err error) {
-	h.lsn, err = net.Listen("tcp", addr)
+func Listen(network, addr string) (h *HttpProxyServer, err error) {
+	lsn, err := net.Listen(network, addr)
 	if err != nil {
-		return err
+		return nil, err
 	}
+	return &HttpProxyServer{
+		lsn: lsn,
+	}, nil
+}
 
+func (h *HttpProxyServer) Serve(exit <-chan bool, d common.Dialer) (err error) {
 	conn := make(chan net.Conn)
 	go func() {
 		for {
 			c, err := h.lsn.Accept()
 			if err != nil {
 				log.Println(err)
-				continue
+				break
 			}
 			conn <- c
 		}
@@ -183,8 +156,17 @@ M:
 				h.lsn.Close()
 				break M
 			}
-			go handleProxyClient(c)
+			go h.handleHttpProxyClient(c, d)
 		}
 	}
 	return
+}
+
+func ListenAndServe(addr string, d common.Dialer, exit <-chan bool) error {
+	server, err := Listen("tcp", addr)
+	if err != nil {
+		return err
+	}
+	server.Serve(exit, d)
+	return nil
 }

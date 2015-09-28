@@ -3,9 +3,11 @@ package main
 import (
 	"errors"
 	"net/url"
+
+	"github.com/hyqhyq3/through/common"
 )
 
-type ProxyCreateFunc func(name string, u *url.URL) (Dialer, error)
+type ProxyCreateFunc func(name string, u *url.URL) (common.Dialer, error)
 
 var proxySchemas map[string]ProxyCreateFunc
 
@@ -16,7 +18,7 @@ func RegisterProxyType(schema string, f ProxyCreateFunc) {
 	proxySchemas[schema] = f
 }
 
-func ProxyFromURL(name, s string) (Dialer, error) {
+func ProxyFromURL(name, s string) (common.Dialer, error) {
 	u, err := url.Parse(s)
 	if err != nil {
 		return nil, err

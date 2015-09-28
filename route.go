@@ -3,26 +3,28 @@ package main
 import (
 	"fmt"
 	"log"
+
+	"github.com/hyqhyq3/through/common"
 )
 
 type Rule struct {
 	Tester
-	Route Dialer
+	Route common.Dialer
 }
 
 var rules []*Rule
-var defaultDialer Dialer
+var defaultDialer common.Dialer
 
-func AddRouteRule(t Tester, d Dialer) {
+func AddRouteRule(t Tester, d common.Dialer) {
 	fmt.Println(d.Name())
 	rules = append(rules, &Rule{t, d})
 }
 
-func SetDefaultRule(d Dialer) {
+func SetDefaultRule(d common.Dialer) {
 	defaultDialer = d
 }
 
-func Route(addr string) Dialer {
+func Route(addr string) common.Dialer {
 	for _, d := range rules {
 		ok, err := d.Test(addr)
 		if err != nil {

@@ -8,12 +8,9 @@ import (
 	"fmt"
 	"net"
 	"net/url"
-)
 
-type Dialer interface {
-	Dial(network, addr string) (c net.Conn, err error)
-	Name() string
-}
+	"github.com/hyqhyq3/through/common"
+)
 
 type AuthInfo struct {
 	Username string
@@ -26,7 +23,7 @@ type HTTPSDialer struct {
 	Auth *AuthInfo
 }
 
-func CreateHTTPSProxy(name string, u *url.URL) (dailer Dialer, err error) {
+func CreateHTTPSProxy(name string, u *url.URL) (dailer common.Dialer, err error) {
 	auth := &AuthInfo{}
 	auth.Username = u.User.Username()
 	auth.Password, _ = u.User.Password()

@@ -5,6 +5,7 @@ import (
 	"net"
 	"net/url"
 
+	"github.com/hyqhyq3/through/common"
 	ss "github.com/shadowsocks/shadowsocks-go/shadowsocks"
 )
 
@@ -15,7 +16,7 @@ type SSDialer struct {
 	Password string
 }
 
-func NewSSDialer(name string, u *url.URL) (Dialer, error) {
+func NewSSDialer(name string, u *url.URL) (common.Dialer, error) {
 	host := u.Host
 	if u.User == nil {
 		return nil, errors.New("Must have encrypt method and password")
