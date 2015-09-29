@@ -12,7 +12,7 @@ type AutoProxyTester struct {
 	autoproxy.Tester
 }
 
-func NewAutoProxyTester(s string) *AutoProxyTester {
+func NewAutoProxyTester() *AutoProxyTester {
 	tester, err := autoproxy.NewTester()
 	if err != nil {
 		log.Fatal(err)

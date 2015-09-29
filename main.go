@@ -67,6 +67,8 @@ func initConfig() {
 			tester = NewDomainTester(rule.Domain, rule.IncludeSubDomain)
 		case "geoip":
 			tester = NewGeoIPTester(rule.Country, rule.Resolve)
+		case "autoproxy":
+			tester = NewAutoProxyTester()
 		case "final":
 			tester = &AlwaysTrueTeseter{}
 		}
