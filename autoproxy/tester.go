@@ -1,4 +1,4 @@
-package gfwlist
+package autoproxy
 
 import "net/url"
 
