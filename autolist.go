@@ -2,7 +2,6 @@ package main
 
 import (
 	"log"
-	"net"
 	"net/url"
 
 	"github.com/hyqhyq3/through/autoproxy"
@@ -21,15 +20,8 @@ func NewAutoProxyTester() *AutoProxyTester {
 }
 
 func (c *AutoProxyTester) Test(addr string) (bool, error) {
-	host, port, _ := net.SplitHostPort(addr)
 	var str string
-	if port == "80" {
-		str = "http://" + host + "/"
-	} else if port == "443" {
-		str = "https://" + host + "/"
-	} else {
-		return false, nil
-	}
+	str = "http://" + addr + "/"
 	u, err := url.Parse(str)
 	if err != nil {
 		return false, err
