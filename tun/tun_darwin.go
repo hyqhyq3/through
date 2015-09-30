@@ -1,32 +1,10 @@
 package tun
 
 import (
-	"fmt"
-	"log"
-	"os"
 	"strings"
 	"syscall"
 	"unsafe"
 )
-
-func BringUp() {
-	file, err := os.OpenFile("/dev/tun0", os.O_RDWR, 0)
-	if err != nil {
-		log.Fatal(err)
-	}
-	ifName := "tun0"
-	_, err = createInterface(file.Fd(), ifName, syscall.IFF_UP|syscall.IFF_RUNNING)
-
-	for {
-		buf := make([]byte, 100)
-		n, err := file.Read(buf)
-		if err != nil {
-			break
-		}
-		fmt.Println(buf[:n])
-	}
-
-}
 
 type ifReq struct {
 	Name  [0x10]byte
