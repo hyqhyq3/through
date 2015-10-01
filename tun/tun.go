@@ -14,7 +14,9 @@ import (
 )
 
 const (
-	ICMP = 1
+	ICMP = 0x1
+	TCP  = 0x6
+	UDP  = 0x11
 )
 
 type IPFrame struct {
@@ -112,6 +114,33 @@ func handleICMP(w io.Writer, frame *IPFrame) {
 	}
 }
 
+type TCPHeader struct {
+	SrcPort, DstPort int
+}
+
+func handleTCP(w io.Writer, frame *IPFrame) {
+
+}
+
+type UDPHeader struct {
+	SrcPort, DstPort int
+	Length           int
+}
+
+func handleUDP(w io.Writer, frame *IPFrame) {
+	header := &UDPHeader{}
+	header.SrcPort = int(binary.BigEndian.Uint16(frame.Payload[0:2]))
+	header.DstPort = int(binary.BigEndian.Uint16(frame.Payload[2:4]))
+	header.Length = int(binary.BigEndian.Uint16(frame.Payload[4:6]))
+
+	laddr, _ := net.ResolveUDPAddr("udp", "10.0.0.102:0")
+	conn, err := net.ListenUDP("udp", laddr)
+	if err != nil {
+		log.Println("send udp error", err)
+	}
+	conn.WriteTo(frame.Payload[8:], &net.UDPAddr{frame.Dst, header.DstPort, ""})
+}
+
 func BringUp() {
 	file, err := os.OpenFile("/dev/tun0", os.O_RDWR, 0)
 	if err != nil {
@@ -119,17 +148,30 @@ func BringUp() {
 	}
 	ifName := "tun0"
 	_, err = createInterface(file.Fd(), ifName, syscall.IFF_UP|syscall.IFF_RUNNING)
-
+	if err != nil {
+		log.Fatal(err)
+	}
+	errno := setInterfaceIP(ifName, net.ParseIP("10.0.13.2"), net.ParseIP("10.0.13.1"))
+	if errno != nil {
+		log.Fatal(errno)
+		return
+	}
 	for {
 		frame, err := readIPFrame(file)
 		if err != nil {
 			fmt.Println(err)
 			continue
 		}
-		if frame.Protocol == ICMP {
+		switch frame.Protocol {
+		case ICMP:
 			handleICMP(file, frame)
+		case TCP:
+			handleTCP(file, frame)
+			fmt.Println("tcp:", frame)
+		case UDP:
+			handleUDP(file, frame)
+			fmt.Println("udp:", frame)
 		}
-		fmt.Println(frame)
 	}
 
 }
