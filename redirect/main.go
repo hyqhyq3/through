@@ -5,9 +5,16 @@ import (
 	"log"
 	"net"
 	"syscall"
+
+	"github.com/hyqhyq3/through"
+	"github.com/hyqhyq3/through/proxy"
 )
 
+var dialer = &through.RouteDialer{}
+
 func main() {
+	through.InitConfig("config.ini")
+
 	syscall.Setreuid(1001, 1001)
 	fmt.Println(syscall.Getuid())
 	l, err := net.Listen("tcp", ":8024")
@@ -24,8 +31,22 @@ func main() {
 }
 
 func handle(c net.Conn) {
+	defer c.Close()
 	fmt.Println(c.LocalAddr())
 	fmt.Println(c.RemoteAddr())
 	orig, err := getOriginDst(c)
-	fmt.Println(orig, err)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	rc, err := dialer.Dial("tcp", orig.String())
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	defer rc.Close()
+	exit := make(chan bool, 1)
+	go proxy.Splice(c, rc, exit)
+	go proxy.Splice(rc, c, exit)
+	<-exit
 }
