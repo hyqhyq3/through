@@ -49,7 +49,9 @@ func (h *HTTPSDialer) Dial(network, addr string) (c net.Conn, err error) {
 		return nil, errors.New("https proxy only support tcp")
 	}
 
-	conn, err := tls.Dial("tcp", h.Host, nil)
+	cfg := &tls.Config{}
+	cfg.InsecureSkipVerify = true
+	conn, err := tls.Dial("tcp", h.Host, cfg)
 	if err != nil {
 		return
 	}

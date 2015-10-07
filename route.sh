@@ -13,5 +13,7 @@ iptables -t nat -A SHADOWSOCKS -p tcp -j REDIRECT --to-ports 8024
 # Apply the rules
 iptables -t nat -A PREROUTING -p tcp -j SHADOWSOCKS
 
+iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
+
 iptables -t mangle -A OUTPUT -m owner --uid-owner through -j MARK --set-mark 2
 iptables -t mangle -A OUTPUT -m owner --uid-owner through -j CONNMARK --save-mark
