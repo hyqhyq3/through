@@ -138,7 +138,7 @@ func handleUDP(w io.Writer, frame *IPFrame) {
 	if err != nil {
 		log.Println("send udp error", err)
 	}
-	conn.WriteTo(frame.Payload[8:], &net.UDPAddr{frame.Dst, header.DstPort, ""})
+	conn.WriteTo(frame.Payload[8:], &net.UDPAddr{IP: frame.Dst, Port: header.DstPort})
 }
 
 func BringUp() {
