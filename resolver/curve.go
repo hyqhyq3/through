@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"golang.org/x/crypto/curve25519"
+	"golang.org/x/crypto/nacl/secretbox"
 )
 
 var public, private = &[32]byte{}, &[32]byte{}
@@ -48,10 +49,13 @@ func decodeKey(key string) *[32]byte {
 
 func encodePacket(dst, src []byte) {
 	copy(dst, public[:])
-	genNonce(dst[32:])
-	for i := 0; i < 12; i++ {
+	dst = dst[32:]
 
-		dst[32+12+i] = 0
-	}
+	var nonce [24]byte
+	genNonce(nonce[:])
+	copy(dst, nonce[:])
+	dst = dst[24:]
+
+	secretbox.Open(dst)
 	//	poly1305.Sum()
 }
