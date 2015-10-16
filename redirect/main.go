@@ -32,13 +32,14 @@ func main() {
 
 func handle(c net.Conn) {
 	defer c.Close()
-	fmt.Println(c.LocalAddr())
-	fmt.Println(c.RemoteAddr())
+
 	orig, err := getOriginDst(c)
 	if err != nil {
 		log.Println(err)
 		return
 	}
+
+	fmt.Printf("Proxy connection from %s to %s\n", c.RemoteAddr(), orig)
 	rc, err := dialer.Dial("tcp", orig.String())
 	if err != nil {
 		log.Println(err)
