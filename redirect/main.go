@@ -15,8 +15,8 @@ var dialer = &through.RouteDialer{}
 func main() {
 	through.InitConfig("config.ini")
 
-	syscall.Setreuid(1001, 1001)
-	fmt.Println(syscall.Getuid())
+	syscall.Setregid(8347, 8347)
+	fmt.Println(syscall.Getgid())
 	l, err := net.Listen("tcp", ":8024")
 	if err != nil {
 		log.Fatal(err)

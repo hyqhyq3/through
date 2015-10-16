@@ -15,5 +15,5 @@ iptables -t nat -A PREROUTING -p tcp -j SHADOWSOCKS
 
 iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
 
-iptables -t mangle -A OUTPUT -m owner --uid-owner through -j MARK --set-mark 2
-iptables -t mangle -A OUTPUT -m owner --uid-owner through -j CONNMARK --save-mark
+iptables -t mangle -A OUTPUT -m owner --gid-owner 8347 -j MARK --set-mark 2
+iptables -t mangle -A OUTPUT -m owner --gid-owner 8347 -j CONNMARK --save-mark
